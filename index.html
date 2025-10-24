@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PlayFab CMD Interface</title>
+<style>
+:root{
+  --bg:#0b0b0b;--text:#e6e6e6;--accent:#00ff6a;--prompt:#c7c7c7;
+}
+html,body{height:100%;margin:0;font-family:"Consolas","Courier New",monospace;background:var(--bg);color:var(--text);}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;}
+.login-box{background:#0b0b0b;border:1px solid #222;border-radius:6px;padding:20px 30px;box-shadow:0 0 25px rgba(0,0,0,0.7);}
+.login-line{margin:10px 0;}label{display:block;font-size:15px;margin-bottom:4px;}
+input{width:280px;background:#000;border:1px solid #333;color:var(--text);font-family:inherit;padding:6px 8px;font-size:15px;}
+button{margin-top:14px;width:100%;background:var(--accent);color:#000;border:none;padding:6px 0;font-weight:bold;font-family:inherit;cursor:pointer;}
+.error{color:#ff4d4d;margin-top:10px;}
+.loading-screen{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;font-size:18px;}
+.loading-bar{width:300px;height:16px;border:1px solid var(--accent);margin-top:16px;overflow:hidden;position:relative;}
+.loading-fill{height:100%;width:0;background:var(--accent);transition:width 0.3s linear;}
+.terminal{display:none;flex-direction:column;width:min(1100px,94%);height:80vh;margin:4vh auto;background:var(--bg);border-radius:6px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.05);}
+.term-top{display:flex;align-items:center;padding:6px 8px;margin-bottom:8px;}
+.term-dots{display:flex;gap:8px;}
+.dot{width:12px;height:12px;border-radius:3px;}
+.dot.close{background:#ff5f57;}
+.dot.min{background:#ffbd2e;}
+.dot.max{background:#28c840;}
+.term-title{font-size:13px;margin-left:auto;margin-right:auto;color:#888;}
+.content{flex:1;overflow:auto;padding:6px 8px 18px 8px;font-size:15px;line-height:1.35;}
+.line{display:flex;align-items:flex-start;gap:8px;white-space:pre-wrap;}
+.prompt{min-width:170px;color:var(--prompt);}
+.output{flex:1;color:var(--text);}
+.caret{display:inline-block;width:8px;height:18px;margin-left:2px;background:var(--accent);animation:blink 1s steps(2,start) infinite;}
+@keyframes blink{0%{opacity:1}50%{opacity:0}100%{opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="login" class="center">
+  <div class="login-box">
+    <div class="login-line"><label>TITLE ID:</label><input id="titleId" placeholder="Enter Title ID" /></div>
+    <div class="login-line"><label>KEY:</label><input id="key" placeholder="Enter Key" /></div>
+    <button id="submit">SUBMIT</button>
+    <div id="error" class="error"></div>
+  </div>
+</div>
+
+<div id="loading" class="loading-screen">
+  <div>VERIFYING CREDENTIALS...</div>
+  <div class="loading-bar"><div class="loading-fill" id="fill"></div></div>
+</div>
+
+<div id="terminal" class="terminal">
+  <div class="term-top">
+    <div class="term-dots"><div class="dot close"></div><div class="dot min"></div><div class="dot max"></div></div>
+    <div class="term-title">C:\Windows\System32\cmd.exe</div>
+  </div>
+  <div id="content" class="content"></div>
+  <textarea id="hiddenInput" style="position:fixed;left:-9999px;opacity:0"></textarea>
+</div>
+
+<script>
+const backendURL="https://privmoddingsite-production.up.railway.app";
+
+const login=document.getElementById('login');
+const loading=document.getElementById('loading');
+const terminal=document.getElementById('terminal');
+const errorBox=document.getElementById('error');
+const fill=document.getElementById('fill');
+
+document.getElementById('submit').addEventListener('click',async()=>{
+  errorBox.textContent='';
+  const title=document.getElementById('titleId').value.trim();
+  const key=document.getElementById('key').value.trim();
+  if(!title||!key){errorBox.textContent="TITLE ID and KEY required.";return;}
+  if(key!=="SYSOWNSYOU"){errorBox.textContent="Invalid KEY. Closing...";setTimeout(()=>window.close(),2000);return;}
+  login.style.display='none';loading.style.display='flex';fill.style.width='0';
+  let width=0;const progress=setInterval(()=>{if(width<90){width+=10;fill.style.width=width+"%";}},300);
+  try{
+    const res=await fetch(`${backendURL}/check_title/${title}`);
+    const data=await res.json();clearInterval(progress);
+    if(!data.valid){fill.style.width='100%';errorBox.textContent="Invalid Title ID.";loading.style.display='none';login.style.display='flex';return;}
+    fill.style.width='100%';setTimeout(()=>{loading.style.display='none';startTerminal();},800);
+  }catch(e){clearInterval(progress);errorBox.textContent="Backend unreachable.";loading.style.display='none';login.style.display='flex';}
+});
+
+function startTerminal(){
+  terminal.style.display='flex';
+  const content=document.getElementById('content');
+  const hidden=document.getElementById('hiddenInput');
+  const PROMPT="C:\\Users\\Admin>";
+
+  function appendLine(promptText, outputText=""){
+    const line=document.createElement('div');line.className='line';
+    const p=document.createElement('div');p.className='prompt';p.textContent=promptText;
+    const o=document.createElement('div');o.className='output';o.textContent=outputText;
+    line.appendChild(p);line.appendChild(o);content.appendChild(line);
+    content.scrollTop=content.scrollHeight;
+  }
+
+  appendLine("", "Microsoft Windows [Version 10.0.19045]");
+  appendLine("", "(c) Microsoft Corporation. All rights reserved.");
+  appendLine("", "");newInputLine();
+
+  let currentTyped=null;
+  function newInputLine(){
+    const line=document.createElement('div');line.className='line';
+    const p=document.createElement('div');p.className='prompt';p.textContent=PROMPT;
+    const o=document.createElement('div');o.className='output';
+    const typed=document.createElement('span');typed.className='typed';
+    const caret=document.createElement('span');caret.className='caret';
+    o.appendChild(typed);o.appendChild(caret);
+    line.appendChild(p);line.appendChild(o);content.appendChild(line);
+    currentTyped=typed;content.scrollTop=content.scrollHeight;
+  }
+
+  hidden.focus();
+  content.addEventListener('click',()=>hidden.focus());
+  hidden.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();const cmd=currentTyped.textContent.trim().toLowerCase();runCommand(cmd);}
+    else if(e.key==='Backspace'){e.preventDefault();currentTyped.textContent=currentTyped.textContent.slice(0,-1);}
+  });
+  hidden.addEventListener('input',()=>{const val=hidden.value.replace(/\r?\n/g,'');currentTyped.textContent+=val;hidden.value='';});
+
+  function runCommand(cmd){
+    if(!cmd){newInputLine();return;}
+    switch(cmd){
+      case 'pull dlc': appendLine(PROMPT,"Pulling DLC data from server...");setTimeout(()=>appendLine(PROMPT,"DLC data successfully synchronized."),800); break;
+      case 'pull cloudscripts': appendLine(PROMPT,"Downloading cloud scripts...");setTimeout(()=>appendLine(PROMPT,"Cloud scripts updated successfully."),800); break;
+      case 'ban all': appendLine(PROMPT,"Initializing ban sequence...");setTimeout(()=>appendLine(PROMPT,"All users have been banned."),800); break;
+      case 'ban someone': appendLine(PROMPT,"Please specify username or ID."); break;
+      default: appendLine(PROMPT,`'${cmd}' is not recognized as a valid command.`);
+    }
+    newInputLine();
+  }
+}
+</script>
+</body>
+</html>
