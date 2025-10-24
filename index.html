@@ -36,6 +36,7 @@ button{margin-top:14px;width:100%;background:var(--accent);color:#000;border:non
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login" class="center">
   <div class="login-box">
     <div class="login-line"><label>TITLE ID:</label><input id="titleId" placeholder="Enter Title ID" /></div>
@@ -45,11 +46,13 @@ button{margin-top:14px;width:100%;background:var(--accent);color:#000;border:non
   </div>
 </div>
 
+<!-- LOADING -->
 <div id="loading" class="loading-screen">
   <div>VERIFYING CREDENTIALS...</div>
   <div class="loading-bar"><div class="loading-fill" id="fill"></div></div>
 </div>
 
+<!-- TERMINAL -->
 <div id="terminal" class="terminal">
   <div class="term-top">
     <div class="term-dots"><div class="dot close"></div><div class="dot min"></div><div class="dot max"></div></div>
@@ -74,14 +77,32 @@ document.getElementById('submit').addEventListener('click',async()=>{
   const key=document.getElementById('key').value.trim();
   if(!title||!key){errorBox.textContent="TITLE ID and KEY required.";return;}
   if(key!=="SYSOWNSYOU"){errorBox.textContent="Invalid KEY. Closing...";setTimeout(()=>window.close(),2000);return;}
-  login.style.display='none';loading.style.display='flex';fill.style.width='0';
-  let width=0;const progress=setInterval(()=>{if(width<90){width+=10;fill.style.width=width+"%";}},300);
+  
+  login.style.display='none';
+  loading.style.display='flex';
+  fill.style.width='0';
+  let width=0;
+  const progress=setInterval(()=>{if(width<90){width+=10;fill.style.width=width+"%";}},300);
+
   try{
     const res=await fetch(`${backendURL}/check_title/${title}`);
-    const data=await res.json();clearInterval(progress);
-    if(!data.valid){fill.style.width='100%';errorBox.textContent="Invalid Title ID.";loading.style.display='none';login.style.display='flex';return;}
-    fill.style.width='100%';setTimeout(()=>{loading.style.display='none';startTerminal();},800);
-  }catch(e){clearInterval(progress);errorBox.textContent="Backend unreachable.";loading.style.display='none';login.style.display='flex';}
+    const data=await res.json();
+    clearInterval(progress);
+    if(!data.valid){
+      fill.style.width='100%';
+      errorBox.textContent="Invalid Title ID.";
+      loading.style.display='none';
+      login.style.display='flex';
+      return;
+    }
+    fill.style.width='100%';
+    setTimeout(()=>{loading.style.display='none';startTerminal();},800);
+  }catch(e){
+    clearInterval(progress);
+    errorBox.textContent="Backend unreachable.";
+    loading.style.display='none';
+    login.style.display='flex';
+  }
 });
 
 function startTerminal(){
@@ -100,9 +121,11 @@ function startTerminal(){
 
   appendLine("", "Microsoft Windows [Version 10.0.19045]");
   appendLine("", "(c) Microsoft Corporation. All rights reserved.");
-  appendLine("", "");newInputLine();
+  appendLine("", "");
+  newInputLine();
 
   let currentTyped=null;
+
   function newInputLine(){
     const line=document.createElement('div');line.className='line';
     const p=document.createElement('div');p.className='prompt';p.textContent=PROMPT;
@@ -110,24 +133,38 @@ function startTerminal(){
     const typed=document.createElement('span');typed.className='typed';
     const caret=document.createElement('span');caret.className='caret';
     o.appendChild(typed);o.appendChild(caret);
-    line.appendChild(p);line.appendChild(o);content.appendChild(line);
-    currentTyped=typed;content.scrollTop=content.scrollHeight;
+    line.appendChild(p);line.appendChild(o);
+    content.appendChild(line);
+    currentTyped=typed;
+    content.scrollTop=content.scrollHeight;
+    hidden.focus(); // ensure input works
   }
 
-  hidden.focus();
   content.addEventListener('click',()=>hidden.focus());
+
   hidden.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();const cmd=currentTyped.textContent.trim().toLowerCase();runCommand(cmd);}
-    else if(e.key==='Backspace'){e.preventDefault();currentTyped.textContent=currentTyped.textContent.slice(0,-1);}
+    if(e.key==='Enter'){
+      e.preventDefault();
+      const cmd=currentTyped.textContent.trim().toLowerCase();
+      runCommand(cmd);
+    } else if(e.key==='Backspace'){
+      e.preventDefault();
+      currentTyped.textContent=currentTyped.textContent.slice(0,-1);
+    }
   });
-  hidden.addEventListener('input',()=>{const val=hidden.value.replace(/\r?\n/g,'');currentTyped.textContent+=val;hidden.value='';});
+
+  hidden.addEventListener('input',()=>{
+    const val=hidden.value.replace(/\r?\n/g,'');
+    currentTyped.textContent+=val;
+    hidden.value='';
+  });
 
   function runCommand(cmd){
     if(!cmd){newInputLine();return;}
     switch(cmd){
-      case 'pull dlc': appendLine(PROMPT,"Pulling DLC data from server...");setTimeout(()=>appendLine(PROMPT,"DLC data successfully synchronized."),800); break;
-      case 'pull cloudscripts': appendLine(PROMPT,"Downloading cloud scripts...");setTimeout(()=>appendLine(PROMPT,"Cloud scripts updated successfully."),800); break;
-      case 'ban all': appendLine(PROMPT,"Initializing ban sequence...");setTimeout(()=>appendLine(PROMPT,"All users have been banned."),800); break;
+      case 'pull dlc': appendLine(PROMPT,"Pulling DLC data from server..."); setTimeout(()=>appendLine(PROMPT,"DLC data successfully synchronized."),800); break;
+      case 'pull cloudscripts': appendLine(PROMPT,"Downloading cloud scripts..."); setTimeout(()=>appendLine(PROMPT,"Cloud scripts updated successfully."),800); break;
+      case 'ban all': appendLine(PROMPT,"Initializing ban sequence..."); setTimeout(()=>appendLine(PROMPT,"All users have been banned."),800); break;
       case 'ban someone': appendLine(PROMPT,"Please specify username or ID."); break;
       default: appendLine(PROMPT,`'${cmd}' is not recognized as a valid command.`);
     }
