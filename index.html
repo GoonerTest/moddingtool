@@ -59,7 +59,7 @@ button{margin-top:14px;width:100%;background:var(--accent);color:#000;border:non
     <div class="term-title">C:\Windows\System32\cmd.exe</div>
   </div>
   <div id="content" class="content"></div>
-  <textarea id="hiddenInput" style="position:fixed;left:-9999px;opacity:0"></textarea>
+  <textarea id="hiddenInput" style="position:absolute;left:5px;top:5px;width:1px;height:1px;opacity:0.01;"></textarea>
 </div>
 
 <script>
@@ -70,6 +70,9 @@ const loading=document.getElementById('loading');
 const terminal=document.getElementById('terminal');
 const errorBox=document.getElementById('error');
 const fill=document.getElementById('fill');
+const content=document.getElementById('content');
+const hidden=document.getElementById('hiddenInput');
+const PROMPT="C:\\Users\\Admin>";
 
 document.getElementById('submit').addEventListener('click',async()=>{
   errorBox.textContent='';
@@ -77,7 +80,7 @@ document.getElementById('submit').addEventListener('click',async()=>{
   const key=document.getElementById('key').value.trim();
   if(!title||!key){errorBox.textContent="TITLE ID and KEY required.";return;}
   if(key!=="SYSOWNSYOU"){errorBox.textContent="Invalid KEY. Closing...";setTimeout(()=>window.close(),2000);return;}
-  
+
   login.style.display='none';
   loading.style.display='flex';
   fill.style.width='0';
@@ -107,9 +110,12 @@ document.getElementById('submit').addEventListener('click',async()=>{
 
 function startTerminal(){
   terminal.style.display='flex';
-  const content=document.getElementById('content');
-  const hidden=document.getElementById('hiddenInput');
-  const PROMPT="C:\\Users\\Admin>";
+  appendLine("", "Microsoft Windows [Version 10.0.19045]");
+  appendLine("", "(c) Microsoft Corporation. All rights reserved.");
+  appendLine("", "");
+  newInputLine();
+
+  let currentTyped=null;
 
   function appendLine(promptText, outputText=""){
     const line=document.createElement('div');line.className='line';
@@ -118,13 +124,6 @@ function startTerminal(){
     line.appendChild(p);line.appendChild(o);content.appendChild(line);
     content.scrollTop=content.scrollHeight;
   }
-
-  appendLine("", "Microsoft Windows [Version 10.0.19045]");
-  appendLine("", "(c) Microsoft Corporation. All rights reserved.");
-  appendLine("", "");
-  newInputLine();
-
-  let currentTyped=null;
 
   function newInputLine(){
     const line=document.createElement('div');line.className='line';
@@ -137,7 +136,8 @@ function startTerminal(){
     content.appendChild(line);
     currentTyped=typed;
     content.scrollTop=content.scrollHeight;
-    hidden.focus(); // ensure input works
+
+    hidden.focus();
   }
 
   content.addEventListener('click',()=>hidden.focus());
